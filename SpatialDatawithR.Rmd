@@ -1,0 +1,232 @@
+---
+title: "Some R Basics"
+output: html_notebook
+---
+
+Parts of this notebook are heavily adapted from Kyle Walker's introduction to TidyCensus:
+https://walkerke.github.io/tidycensus/index.html and John Little's Mapping with R via Data and Visualization services at Duke University Libraries, https://map-rfun.library.duke.edu/index.html. Both are great resources and you should check them out for more examples and information.
+
+----------
+
+This R Notebook lets you run code. Anywhere you see a shaded box with the little green arrow that means you can run the code in the console. Try it out.
+
+
+```{r}
+print("School of Data rocks!")
+
+```
+
+Lets install the packages we will be using today:
+```{r}
+install.packages("tidycensus")
+install.packages("tidyverse")
+install.packages("ggplot2")
+install.packages("sf")
+install.packages("leaflet")
+install.packages("mapview")
+install.packages("rgdal")
+install.packages("dplyr")
+install.packages("readr")
+install.packages("viridis")
+
+```
+
+and now load in the libraries - **remember you have to load libraries everytime you restart R
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+library(ggplot2)
+library(sf)
+library(leaflet)
+library(mapview)
+library(rgdal)
+library(dplyr)
+library(readr)
+library(viridis)
+```
+
+
+Setting your working directory. You will want to set your working directory by clicking on Session at the top and then Set Working Directory. Choose the folder where you have your data. For shapefiles, because they are tricky, you will need to make sure that the .shp file is with all the other associated files.
+
+----------------
+
+TidyCensus interfaces with the US Census Bureau's decennial Census and five-year American Community Survey APIs. TidyCensus gives you Tidyverse-ready data frames.
+
+So what can you do with TidyCensus?
+
+You can get census data quickly, map it to corresponding census geographies (with some help), such as census tracts, and then export out into a shapefile which you can use in QGIS or other GIS software.
+
+Setting it up. How do you get that access to the Census? For this to work and with some other cases, like Twitter for example, you will need to request a key to get access.
+
+Go here to get your Census Key! --> http://api.census.gov/data/key_signup.html
+and sign up!
+
+Now your census api key...just replace  your api key in the text below before you run the script.
+
+```{r}
+census_api_key("your API key here")
+
+```
+
+
+Tidycensus uses the US Census API Key and provides access to the ACS 5 Year: https://www.census.gov/data/developers/data-sets/acs-5year.html
+and the Decennial 1990, 2000, and 2010 census:
+https://www.census.gov/data/developers/data-sets/decennial-census.html
+
+Here is a basic reference cheat sheet for all the functions in tidycensus                                     c bs:
+https://walkerke.github.io/tidycensus/reference/index.html
+
+For the decennial census and community survey you use 
+get_decennial()
+and
+get_acs()
+within the parentheses you will add geography, variables, year, etc.
+
+Lets try it out. Here we are getting median rent from the 1990 decennial census.
+
+```{r}
+medrent90 <- get_decennial(geography = "state", variables = "H043A001", year = 1990)
+```
+
+Lets see what we have:
+
+```{r}
+head(medrent90)
+```
+
+You can now visualize this quickly with ggplot2:
+
+
+```{r}
+medrent90 %>%
+ggplot(aes(x = value, y = reorder(NAME, value))) +
+geom_point()
+```
+
+Now lets do it for the CA Counties:
+```{r}
+medrentcounties90 <- get_decennial(geography = "county", state = "CA", variables = "H043A001", year = 1990)
+```
+```{r}
+medrentcounties90 %>%
+ggplot(aes(x = value, y = reorder(NAME, value))) +
+geom_point()
+```
+
+Now lets try and get the geometry for those counties in order to make a map:
+
+```{r}
+options(tigris_use_cache = TRUE)
+medrent90map <- get_decennial(geography = "state", variables = "H043A001", year = 1990, geometry = TRUE)
+
+```
+
+```{r}
+head(medrent90map)
+```
+
+Ok, now lets take a look at the data on a map:
+
+```{r}
+options(tigris_use_cache = TRUE)
+mapview(medrent90map, zcol = "value", legend = TRUE)
+```
+
+
+Faceted Mapping!
+
+Once you dig into the census you will see that there is a lot of data that has multiple variables. A great example of this is trying to map out the racial demographics of say Los Angeles. Using ggplot2 you can create multiple maps showing each variable. How is this possible? The get_decennial and get_ACS functions have another optional argument, summary_var, which functions as multigroup denominator.  
+
+First you construct a value to which you assign your multiple variables:
+
+```{r}
+racevars <- c(White = "P005003", 
+              Black = "P005004", 
+              Asian = "P005006", 
+              Hispanic = "P004003")
+```
+Next you get the data from the census and use the summary_var on the variable to which your other variables belong. 
+```{r}
+laracemap<- get_decennial(geography = "tract", variables = racevars, 
+                  state = "CA", county = "Los Angeles County", geometry = TRUE,
+                  summary_var = "P001001") 
+```
+Lets see what you have:
+```{r}
+head(laracemap)
+```
+```{r}
+laracemap %>%
+  mutate(pct = 100 * (value / summary_value)) %>%
+  ggplot(aes(fill = pct, color = pct)) +
+  facet_wrap(~variable) +
+  geom_sf() +
+  coord_sf(crs = 26915) + 
+  scale_fill_viridis() +
+  scale_color_viridis()
+```
+
+FINDING DATA:
+
+There are literally thousands of variables across the census. How can you easily find the IDs to pull these up? You can go to the census api site - https://www.census.gov/data/developers/data-sets.html and select a census and then go to a Data Profiles site - https://api.census.gov/data/2017/acs/acs5/profile/variables.html
+
+Or you can use TidyCensus to load variables from a census. The function is:
+load_variables
+in addition you will need year of the Census or the endyear of the ACS sample and the dataset - either sf1, sf3, or acs5. You can use the setting cache = true and store it is a variable in R.
+
+So lets try it with the ACS:
+
+```{r}
+variablesforACS <- load_variables(2015, "acs5", cache = TRUE)
+```
+
+You can now quickly search and explore the variables in the R Data Viewer.
+
+
+What about creating a shapefile?
+
+Lets look at transportation - B08015_001 - AGGREGATE NUMBER OF VEHICLES (CAR, TRUCK, OR VAN) USED IN COMMUTING BY WORKERS 16 YEARS AND OVER BY SEX
+
+```{r}
+catransportation <- get_acs(state = "CA", geography = "county", 
+              variables = "B08015_001", geometry = TRUE)
+```
+
+```{r}
+mapview(catransportation, zcol = "estimate", legend = TRUE)
+```
+
+How about for the country?
+
+```{r}
+usatransportation <- get_acs(geography = "county", 
+              variables = "B08015_001", geometry = TRUE)
+```
+```{r}
+mapview(usatransportation, zcol = "estimate", legend = TRUE)
+```
+
+Write the shapefile:
+
+```{r}
+st_write(usatransportation, "usatransportation.shp")
+```
+
+
+
+
+EXERCISES:
+
+Find a multiple variable and map it out.
+
+Try mapping out same variable over all avaialble years.
+
+?
+
+
+               
+
+
+
+
