@@ -74,7 +74,7 @@ Tidycensus uses the US Census API Key and provides access to the ACS 5 Year: htt
 and the Decennial 1990, 2000, and 2010 census:
 https://www.census.gov/data/developers/data-sets/decennial-census.html
 
-Here is a basic reference cheat sheet for all the functions in tidycensus                                     c bs:
+Here is a basic reference cheat sheet for all the functions in tidycensus                                     
 https://walkerke.github.io/tidycensus/reference/index.html
 
 For the decennial census and community survey you use 
