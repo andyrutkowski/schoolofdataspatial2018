@@ -222,6 +222,8 @@ Find a multiple variable and map it out.
 
 Try mapping out same variable over all avaialble years.
 
+Create a shapefile and open it in QGIS.
+
 ?
 
 
