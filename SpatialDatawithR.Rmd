@@ -61,7 +61,7 @@ Setting it up. How do you get that access to the Census? For this to work and wi
 
 Go here to get your Census Key! --> http://api.census.gov/data/key_signup.html
 and sign up!
-
+(59b2d9e72034cd142388f2732fedb072b1675f36)
 Now your census api key...just replace  your api key in the text below before you run the script.
 
 ```{r}
